@@ -9,3 +9,4 @@ youtube-transcript-api
 unstructured
 openai
 pydantic
+langgraph
