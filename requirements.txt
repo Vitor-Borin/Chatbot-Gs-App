@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+langchain
+langchain-community
+langchain-core
+langchain-openai
+langchain-text-splitters
+youtube-transcript-api
+unstructured
+openai
+pydantic

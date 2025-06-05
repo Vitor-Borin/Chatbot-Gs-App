@@ -1,0 +1,11 @@
+venv/
+
+.env
+
+resposta.mp3
+
+__pycache__/
+app/__pycache__/
+
+*.log
+*.sqlite3
