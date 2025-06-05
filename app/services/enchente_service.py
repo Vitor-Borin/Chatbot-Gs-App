@@ -9,7 +9,7 @@ def verificar_enchente_por_bairro(bairro_usuario: str) -> str:
         FROM GS_ALERTAS A
         JOIN GS_COORDENADAS C ON A.ID_COORDENADA = C.ID_COORDENADA
         JOIN GS_BAIRRO B ON C.ID_BAIRRO = B.ID_BAIRRO
-        WHERE LOWER(B.NM_BAIRRO) = :bairro
+        WHERE LOWER(B.NOM_BAIRRO) = :bairro
     """
     cursor.execute(query, [bairro_usuario.lower()])
     count = cursor.fetchone()[0]
