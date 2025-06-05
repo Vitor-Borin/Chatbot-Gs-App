@@ -76,7 +76,7 @@ def retrieve(state: State):
 prompt = hub.pull("rlm/rag-prompt")
 
 def generate(state: State):
-    pergunta = state["question"].lower()
+    pergunta = state["question"].strip().lower()
 
     cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
     if any(c in pergunta for c in cumprimentos):
@@ -90,7 +90,16 @@ def generate(state: State):
             )
         }
 
-    if pergunta.strip() == "1":
+    if pergunta == "1 - ver se há enchentes na minha região":
+        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
+
+    if pergunta == "2 - receber alertas e notificações":
+        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
+
+    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar", "estrago", "emergência"]):
+        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
+
+    if pergunta == "1":
         return {
             "answer": (
                 "Entendido! Agora escolha uma das opções abaixo:\n\n"
@@ -99,10 +108,10 @@ def generate(state: State):
             )
         }
 
-    if pergunta.strip() == "2":
+    if pergunta == "2":
         return {"answer": "Entendido! Me envie qual problema você quer relatar."}
 
-    if pergunta.strip() == "3":
+    if pergunta == "3":
         return {
             "answer": (
                 "Como posso te ajudar hoje?\n\n"
@@ -112,15 +121,6 @@ def generate(state: State):
                 "- Onde buscar ajuda na minha região?"
             )
         }
-
-    if pergunta.strip().lower() == "1 - ver se há enchentes na minha região".lower():
-        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
-
-    if pergunta.strip().lower() == "2 - receber alertas e notificações".lower():
-        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
-
-    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar", "estrago", "emergência"]):
-        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
 
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
 
