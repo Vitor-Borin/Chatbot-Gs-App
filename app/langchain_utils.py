@@ -85,6 +85,18 @@ def retrieve(state: State):
 prompt = hub.pull("rlm/rag-prompt")
 
 def generate(state: State):
+    cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite", "e aí"]
+    if any(c in state["question"].lower() for c in cumprimentos):
+        return {
+            "answer": (
+                "Olá! 👋 Como posso te ajudar hoje?\n\n"
+                "Você pode perguntar, por exemplo:\n"
+                "- Quais itens são essenciais em uma enchente?\n"
+                "- O que fazer antes de um deslizamento?\n"
+                "- Onde buscar ajuda na minha região?"
+            )
+        }
+
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
 
     if any(palavra in state["question"].lower() for palavra in ["simule", "etapa", "passo a passo"]):
@@ -93,13 +105,12 @@ def generate(state: State):
             "ANTES, DURANTE e DEPOIS do desastre. Seja direto, didático e empático."
         )
 
-    if any (p in state["question"].lower() for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
+    if any(p in state["question"].lower() for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
         docs_content += (
-        "\n\nMonte uma resposta iniciando com a frase: "
-        "'A lista de itens essenciais para essa emergência é a seguinte:', "
-        "seguida por uma lista clara separada por hífens (-), sem explicações longas."
-    )
-
+            "\n\nMonte uma resposta iniciando com a frase: "
+            "'A lista de itens essenciais para essa emergência é a seguinte:', "
+            "seguida por uma lista clara separada por hífens (-), sem explicações longas."
+        )
 
     messages = prompt.invoke({
         "question": state["question"],
