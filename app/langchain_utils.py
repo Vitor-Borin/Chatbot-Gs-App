@@ -78,9 +78,9 @@ prompt = hub.pull("rlm/rag-prompt")
 
 def generate(state: State):
     pergunta = state["question"].strip().lower()
-    current_state = state.get("menu_state", "main_menu")
+    current_state = state.get("menu_state", "initial")
 
-    if pergunta in ["voltar", "menu", "menu principal"]:
+    if current_state != "initial" and pergunta in ["voltar", "menu", "menu principal", "cancelar"]:
         return {
             "answer": (
                 "👋 Olá, somos o Drenna!\n\n"
@@ -92,7 +92,7 @@ def generate(state: State):
             "menu_state": "main_menu"
         }
 
-    if current_state == "main_menu":
+    if current_state == "initial":
         cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
         if any(c in pergunta for c in cumprimentos):
             return {
@@ -105,7 +105,10 @@ def generate(state: State):
                 ),
                 "menu_state": "main_menu"
             }
+        else:
+            return {"answer": "Olá! Eu sou o Drenna, seu assistente de emergência. Para começar, digite 'menu' ou 'olá' para ver as opções disponíveis.", "menu_state": "initial"}
 
+    elif current_state == "main_menu":
         if pergunta == "1":
             return {
                 "answer": (
@@ -191,7 +194,7 @@ def generate(state: State):
 
         return {
             "answer": (
-                "Opção inválida no sub-menu. Por favor, escolha 1 ou 2, ou digite 'voltar'.\n\n"
+                "Opção inválida no sub-menu. Por favor, escolha 1, 2, ou digite 'voltar'.\n\n"
                 "Entendido! Agora escolha uma das opções abaixo:\n\n"
                 "1 - Ver se há enchentes na minha região\n"
                 "2 - Receber alertas e notificações"
@@ -208,7 +211,7 @@ def generate(state: State):
 
         return {"answer": resposta_bd, "menu_state": "main_menu"}
 
-    return {"answer": "Desculpe, não entendi. Digite 'menu' para ver as opções.", "menu_state": "main_menu"}
+    return {"answer": "Desculpe, algo inesperado aconteceu. Por favor, digite 'menu' para recomeçar.", "menu_state": "main_menu"}
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -227,12 +230,12 @@ def gerar_audio(texto: str) -> str:
 
     return audio_base64
 
-def gerar_resposta(pergunta: str):
+def gerar_resposta(pergunta: str, incoming_menu_state: str = "initial"):
     entrada = {
         "question": pergunta,
         "context": [],
         "answer": "",
-        "menu_state": "main_menu"
+        "menu_state": incoming_menu_state
     }
     graph_builder = StateGraph(State).add_sequence([retrieve, generate])
     graph_builder.add_edge(START, "retrieve")
@@ -240,6 +243,7 @@ def gerar_resposta(pergunta: str):
 
     resultado = graph.invoke(entrada)
     resposta = resultado["answer"]
+    novo_menu_state = resultado["menu_state"]
     audio_base64 = gerar_audio(resposta)
 
-    return resposta, audio_base64
+    return resposta, audio_base64, novo_menu_state
