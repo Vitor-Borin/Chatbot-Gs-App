@@ -99,17 +99,8 @@ def generate(state: State):
             )
         }
 
-    if pergunta.strip() == "1 - ver se há enchentes na minha região":
-        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
-
-    if pergunta.strip() == "2 - receber alertas e notificações":
-        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
-
     if pergunta.strip() == "2":
         return {"answer": "Entendido! Me envie qual problema você quer relatar."}
-
-    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar""estrago", "emergência"]):
-        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
 
     if pergunta.strip() == "3":
         return {
@@ -121,6 +112,15 @@ def generate(state: State):
                 "- Onde buscar ajuda na minha região?"
             )
         }
+
+    if pergunta.strip().lower() == "1 - ver se há enchentes na minha região".lower():
+        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
+
+    if pergunta.strip().lower() == "2 - receber alertas e notificações".lower():
+        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
+
+    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar", "estrago", "emergência"]):
+        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
 
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
 
@@ -143,9 +143,24 @@ def generate(state: State):
     })
 
     response = llm.invoke(messages)
-    resposta_final = response.content.strip()
+    resposta_original = response.content.strip()
+
+    introducoes = [
+        "Com base nas informações que encontrei: ",
+        "De acordo com os dados disponíveis: ",
+        "Verifiquei nas fontes e a informação é a seguinte: ",
+        "Segundo o que apurei: "
+    ]
+    introducao_aleatoria = random.choice(introducoes) if introducoes else ""
+
+    resposta_final = introducao_aleatoria + resposta_original
+
     if len(resposta_final) > 500:
-        resposta_final = resposta_final[:480].rsplit(".", 1)[0] + "."
+        limite_resposta = 500 - len(introducao_aleatoria)
+        if limite_resposta > 0:
+             resposta_final = introducao_aleatoria + resposta_original[:limite_resposta].rsplit(".", 1)[0] + "."
+        else:
+             resposta_final = resposta_original[:480].rsplit(".", 1)[0] + "."
 
     if "não sei" in resposta_final.lower():
         resposta_final = (
