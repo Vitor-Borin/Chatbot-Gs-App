@@ -10,8 +10,12 @@ class Pergunta(BaseModel):
 
 @router.post("/perguntar")
 def responder(pergunta: Pergunta):
-    resposta = gerar_resposta(pergunta.question)
-    return resposta
+    try:
+        texto_resposta, audio_base64 = gerar_resposta(pergunta.question)
+        return {"resposta": texto_resposta, "audio": audio_base64}
+    except Exception as e:
+        print(f"Erro na rota /perguntar: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/enchente")
 def consultar_enchente(bairro: str):
