@@ -14,13 +14,12 @@ from langchain import hub
 from langgraph.graph import StateGraph, START
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import VideoUnavailable
+import random
 
-# Inicializa LLM e embeddings
 llm = ChatOpenAI(model="gpt-4o-mini")
 embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
 vector_store = InMemoryVectorStore(embeddings)
 
-# Fontes web confiáveis sobre desastres naturais
 urls = [
     "https://www.gov.br/defesacivil/pt-br/prevenir-e-preparar/tipos-de-desastres",
     "https://www.gov.br/defesacivil/pt-br/prevenir-e-preparar/planos-de-contingencia",
@@ -41,15 +40,12 @@ urls = [
     "https://www.cnseg.org.br/noticias/desastres-naturais-sao-um-grande-desafio-para-os-municipios-brasileiros"
 ]
 
-# Vídeos com transcrição automática em português
 youtube_links = [
     "https://youtu.be/aIR6khgsc3A",
     "https://youtu.be/mnhJmOdoFEI"
 ]
 
-# Carregamento inicial
 docs = []
-
 loader = UnstructuredURLLoader(urls=urls)
 docs += loader.load()
 
@@ -59,37 +55,66 @@ for link in youtube_links:
         transcript_list = YouTubeTranscriptApi.get_transcript(yt_loader.video_id, languages=["pt"])
         transcript = " ".join([entry["text"] for entry in transcript_list])
         docs.append(Document(page_content=transcript, metadata=yt_loader._metadata))
-        print(f"✅ Transcrição carregada: {link}")
     except Exception as e:
-        print(f"❌ Erro ao processar {link}\nMotivo: {e}")
+        pass
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 all_splits = text_splitter.split_documents(docs)
-
 vector_store.add_documents(all_splits)
 
-print(f"✅ {len(all_splits)} fragmentos foram indexados com sucesso!")
-
-# Estrutura do estado
 class State(TypedDict):
     question: str
     context: List[Document]
     answer: str
 
-# Função de busca dos documentos mais parecidos
 def retrieve(state: State):
-    retrieved_docs = vector_store.similarity_search(state["question"])
-    return {"context": retrieved_docs}
+    all_retrieved_docs = vector_store.similarity_search(state["question"], k=10)
+    num_docs_to_use = min(5, len(all_retrieved_docs))
+    selected_docs = random.sample(all_retrieved_docs, num_docs_to_use)
+    return {"context": selected_docs}
 
-# Função que gera a resposta baseada no contexto
 prompt = hub.pull("rlm/rag-prompt")
 
 def generate(state: State):
-    cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite", "e aí"]
-    if any(c in state["question"].lower() for c in cumprimentos):
+    pergunta = state["question"].lower()
+
+    cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
+    if any(c in pergunta for c in cumprimentos):
         return {
             "answer": (
-                "Olá! 👋 Como posso te ajudar hoje?\n\n"
+                "👋 Olá, somos o Drenna!\n\n"
+                "Selecione a categoria que melhor define sua dúvida:\n\n"
+                "1 - Alertas e Situações de Risco\n"
+                "2 - Relatar um problema\n"
+                "3 - Prevenção e Dicas"
+            )
+        }
+
+    if pergunta.strip() == "1":
+        return {
+            "answer": (
+                "Entendido! Agora escolha uma das opções abaixo:\n\n"
+                "1 - Ver se há enchentes na minha região\n"
+                "2 - Receber alertas e notificações"
+            )
+        }
+
+    if pergunta.strip() == "1 - ver se há enchentes na minha região":
+        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
+
+    if pergunta.strip() == "2 - receber alertas e notificações":
+        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
+
+    if pergunta.strip() == "2":
+        return {"answer": "Entendido! Me envie qual problema você quer relatar."}
+
+    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar""estrago", "emergência"]):
+        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
+
+    if pergunta.strip() == "3":
+        return {
+            "answer": (
+                "Como posso te ajudar hoje?\n\n"
                 "Você pode perguntar, por exemplo:\n"
                 "- Quais itens são essenciais em uma enchente?\n"
                 "- O que fazer antes de um deslizamento?\n"
@@ -99,13 +124,13 @@ def generate(state: State):
 
     docs_content = "\n\n".join(doc.page_content for doc in state["context"])
 
-    if any(palavra in state["question"].lower() for palavra in ["simule", "etapa", "passo a passo"]):
+    if any(palavra in pergunta for palavra in ["simule", "etapa", "passo a passo"]):
         docs_content += (
             "\n\nResponda como uma simulação realista dividida em etapas claras: "
             "ANTES, DURANTE e DEPOIS do desastre. Seja direto, didático e empático."
         )
 
-    if any(p in state["question"].lower() for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
+    if any(p in pergunta for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
         docs_content += (
             "\n\nMonte uma resposta iniciando com a frase: "
             "'A lista de itens essenciais para essa emergência é a seguinte:', "
@@ -118,20 +143,18 @@ def generate(state: State):
     })
 
     response = llm.invoke(messages)
+    resposta_final = response.content.strip()
+    if len(resposta_final) > 500:
+        resposta_final = resposta_final[:480].rsplit(".", 1)[0] + "."
 
-    if "não sei" in response.content.lower():
+    if "não sei" in resposta_final.lower():
         resposta_final = (
             "Ainda não encontrei informações precisas sobre isso. "
             "Estou em constante aprendizado e posso continuar pesquisando se quiser."
         )
-    else:
-        resposta_final = response.content.strip()
-        if len(resposta_final) > 500:
-            resposta_final = resposta_final[:480].rsplit(".", 1)[0] + "."
 
     return {"answer": resposta_final}
 
-# Cliente da OpenAI para gerar áudio
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def gerar_audio(texto: str) -> str:
@@ -149,7 +172,6 @@ def gerar_audio(texto: str) -> str:
 
     return audio_base64
 
-# Função principal para usar no FastAPI
 def gerar_resposta(pergunta: str):
     entrada = {
         "question": pergunta,
