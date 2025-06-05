@@ -93,12 +93,13 @@ def generate(state: State):
             "ANTES, DURANTE e DEPOIS do desastre. Seja direto, didático e empático."
         )
 
-    if "lista" in state["question"].lower() and "emergência" in state["question"].lower():
+    if any (p in state["question"].lower() for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
         docs_content += (
-            "\n\nMonte uma resposta iniciando com a frase: "
-            "'A lista de itens essenciais para essa emergência é a seguinte:', "
-            "seguida por uma lista clara separada por hífens (-), sem explicações longas."
-        )
+        "\n\nMonte uma resposta iniciando com a frase: "
+        "'A lista de itens essenciais para essa emergência é a seguinte:', "
+        "seguida por uma lista clara separada por hífens (-), sem explicações longas."
+    )
+
 
     messages = prompt.invoke({
         "question": state["question"],
