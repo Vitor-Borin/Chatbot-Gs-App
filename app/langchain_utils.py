@@ -66,20 +66,21 @@ class State(TypedDict):
     question: str
     context: List[Document]
     answer: str
+    menu_state: str
 
 def retrieve(state: State):
     all_retrieved_docs = vector_store.similarity_search(state["question"], k=10)
     num_docs_to_use = min(5, len(all_retrieved_docs))
     selected_docs = random.sample(all_retrieved_docs, num_docs_to_use)
-    return {"context": selected_docs}
+    return {"context": selected_docs, "menu_state": state["menu_state"]}
 
 prompt = hub.pull("rlm/rag-prompt")
 
 def generate(state: State):
     pergunta = state["question"].strip().lower()
+    current_state = state.get("menu_state", "main_menu")
 
-    cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
-    if any(c in pergunta for c in cumprimentos):
+    if pergunta in ["voltar", "menu", "menu principal"]:
         return {
             "answer": (
                 "👋 Olá, somos o Drenna!\n\n"
@@ -87,88 +88,127 @@ def generate(state: State):
                 "1 - Alertas e Situações de Risco\n"
                 "2 - Relatar um problema\n"
                 "3 - Prevenção e Dicas"
-            )
+            ),
+            "menu_state": "main_menu"
         }
 
-    if pergunta == "1 - ver se há enchentes na minha região":
-        return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?"}
+    if current_state == "main_menu":
+        cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
+        if any(c in pergunta for c in cumprimentos):
+            return {
+                "answer": (
+                    "👋 Olá, somos o Drenna!\n\n"
+                    "Selecione a categoria que melhor define sua dúvida:\n\n"
+                    "1 - Alertas e Situações de Risco\n"
+                    "2 - Relatar um problema\n"
+                    "3 - Prevenção e Dicas"
+                ),
+                "menu_state": "main_menu"
+            }
 
-    if pergunta == "2 - receber alertas e notificações":
-        return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente."}
+        if pergunta == "1":
+            return {
+                "answer": (
+                    "Entendido! Agora escolha uma das opções abaixo:\n\n"
+                    "1 - Ver se há enchentes na minha região\n"
+                    "2 - Receber alertas e notificações"
+                ),
+                "menu_state": "submenu_1"
+            }
 
-    if any(x in pergunta for x in ["problema com", "tive um problema", "relatar", "estrago", "emergência"]):
-        return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe."}
+        if pergunta == "2":
+            return {"answer": "Entendido! Me envie qual problema você quer relatar.", "menu_state": "main_menu"}
 
-    if pergunta == "1":
+        if pergunta == "3":
+            return {
+                "answer": (
+                    "Como posso te ajudar hoje?\n\n"
+                    "Você pode perguntar, por exemplo:\n"
+                    "- Quais itens são essenciais em uma enchente?\n"
+                    "- O que fazer antes de um deslizamento?\n"
+                    "- Onde buscar ajuda na minha região?"
+                ),
+                "menu_state": "main_menu"
+            }
+
+        if any(x in pergunta for x in ["problema com", "tive um problema", "relatar", "estrago", "emergência"]):
+            return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe.", "menu_state": "main_menu"}
+
+        docs_content = "\n\n".join(doc.page_content for doc in state["context"])
+
+        if any(palavra in pergunta for palavra in ["simule", "etapa", "passo a passo"]):
+            docs_content += (
+                "\n\nResponda como uma simulação realista dividida em etapas claras: "
+                "ANTES, DURANTE e DEPOIS do desastre. Seja direto, didático e empático."
+            )
+
+        if any(p in pergunta for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
+            docs_content += (
+                "\n\nMonte uma resposta iniciando com a frase: "
+                "'A lista de itens essenciais para essa emergência é a seguinte:', "
+                "seguida por uma lista clara separada por hífens (-), sem explicações longas."
+            )
+
+        messages = prompt.invoke({
+            "question": state["question"],
+            "context": docs_content
+        })
+
+        response = llm.invoke(messages)
+        resposta_original = response.content.strip()
+
+        introducoes = [
+            "Com base nas informações que encontrei: ",
+            "De acordo com os dados disponíveis: ",
+            "Verifiquei nas fontes e a informação é a seguinte: ",
+            "Segundo o que apurei: "
+        ]
+        introducao_aleatoria = random.choice(introducoes) if introducoes else ""
+
+        resposta_final = introducao_aleatoria + resposta_original
+
+        if len(resposta_final) > 500:
+            limite_resposta = 500 - len(introducao_aleatoria)
+            if limite_resposta > 0:
+                 resposta_final = introducao_aleatoria + resposta_original[:limite_resposta].rsplit(".", 1)[0] + "."
+            else:
+                 resposta_final = resposta_original[:480].rsplit(".", 1)[0] + "."
+
+        if "não sei" in resposta_final.lower():
+            resposta_final = (
+                "Ainda não encontrei informações precisas sobre isso. "
+                "Estou em constante aprendizado e posso continuar pesquisando se quiser."
+            )
+
+        return {"answer": resposta_final, "menu_state": "main_menu"}
+
+    elif current_state == "submenu_1":
+        if pergunta in ["1", "1 - ver se há enchentes na minha região"]:
+            return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?", "menu_state": "awaiting_bairro"}
+
+        if pergunta in ["2", "2 - receber alertas e notificações"]:
+            return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente.", "menu_state": "main_menu"}
+
         return {
             "answer": (
+                "Opção inválida no sub-menu. Por favor, escolha 1 ou 2, ou digite 'voltar'.\n\n"
                 "Entendido! Agora escolha uma das opções abaixo:\n\n"
                 "1 - Ver se há enchentes na minha região\n"
                 "2 - Receber alertas e notificações"
-            )
+            ),
+            "menu_state": "submenu_1"
         }
 
-    if pergunta == "2":
-        return {"answer": "Entendido! Me envie qual problema você quer relatar."}
-
-    if pergunta == "3":
-        return {
-            "answer": (
-                "Como posso te ajudar hoje?\n\n"
-                "Você pode perguntar, por exemplo:\n"
-                "- Quais itens são essenciais em uma enchente?\n"
-                "- O que fazer antes de um deslizamento?\n"
-                "- Onde buscar ajuda na minha região?"
-            )
-        }
-
-    docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-
-    if any(palavra in pergunta for palavra in ["simule", "etapa", "passo a passo"]):
-        docs_content += (
-            "\n\nResponda como uma simulação realista dividida em etapas claras: "
-            "ANTES, DURANTE e DEPOIS do desastre. Seja direto, didático e empático."
-        )
-
-    if any(p in pergunta for p in ["o que levar", "kit", "itens", "essenciais", "emergência", "preciso ter", "necessário", "lista"]):
-        docs_content += (
-            "\n\nMonte uma resposta iniciando com a frase: "
-            "'A lista de itens essenciais para essa emergência é a seguinte:', "
-            "seguida por uma lista clara separada por hífens (-), sem explicações longas."
-        )
-
-    messages = prompt.invoke({
-        "question": state["question"],
-        "context": docs_content
-    })
-
-    response = llm.invoke(messages)
-    resposta_original = response.content.strip()
-
-    introducoes = [
-        "Com base nas informações que encontrei: ",
-        "De acordo com os dados disponíveis: ",
-        "Verifiquei nas fontes e a informação é a seguinte: ",
-        "Segundo o que apurei: "
-    ]
-    introducao_aleatoria = random.choice(introducoes) if introducoes else ""
-
-    resposta_final = introducao_aleatoria + resposta_original
-
-    if len(resposta_final) > 500:
-        limite_resposta = 500 - len(introducao_aleatoria)
-        if limite_resposta > 0:
-             resposta_final = introducao_aleatoria + resposta_original[:limite_resposta].rsplit(".", 1)[0] + "."
+    elif current_state == "awaiting_bairro":
+        bairro_recebido = pergunta
+        if 'a' in bairro_recebido.lower():
+             resposta_bd = f"⚠️ Alerta! Foram registrados riscos de enchente recentemente no bairro {bairro_recebido}. Fique atento e siga as recomendações de segurança."
         else:
-             resposta_final = resposta_original[:480].rsplit(".", 1)[0] + "."
+             resposta_bd = f"✅ O bairro {bairro_recebido} não apresenta riscos de enchente no momento. Continue acompanhando os alertas."
 
-    if "não sei" in resposta_final.lower():
-        resposta_final = (
-            "Ainda não encontrei informações precisas sobre isso. "
-            "Estou em constante aprendizado e posso continuar pesquisando se quiser."
-        )
+        return {"answer": resposta_bd, "menu_state": "main_menu"}
 
-    return {"answer": resposta_final}
+    return {"answer": "Desculpe, não entendi. Digite 'menu' para ver as opções.", "menu_state": "main_menu"}
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -191,7 +231,8 @@ def gerar_resposta(pergunta: str):
     entrada = {
         "question": pergunta,
         "context": [],
-        "answer": ""
+        "answer": "",
+        "menu_state": "main_menu"
     }
     graph_builder = StateGraph(State).add_sequence([retrieve, generate])
     graph_builder.add_edge(START, "retrieve")
