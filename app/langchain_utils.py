@@ -80,6 +80,9 @@ def generate(state: State):
     pergunta = state["question"].strip().lower()
     current_state = state.get("menu_state", "initial")
 
+    print(f"Current State: {current_state}, Question: {pergunta}")
+
+    # Check for main menu return regardless of current state (except initial)
     if current_state != "initial" and pergunta in ["voltar", "menu", "menu principal", "cancelar"]:
         return {
             "answer": (
@@ -92,31 +95,21 @@ def generate(state: State):
             "menu_state": "main_menu"
         }
 
+    # Handle initial state
     if current_state == "initial":
-        cumprimentos = ["oi", "olá", "bom dia", "boa tarde", "boa noite"]
-        if any(c in pergunta for c in cumprimentos) or pergunta == "menu":
-            return {
-                "answer": (
-                    "👋 Olá, somos o Drenna!\n\n"
-                    "Selecione a categoria que melhor define sua dúvida:\n\n"
-                    "1 - Alertas e Situações de Risco\n"
-                    "2 - Relatar um problema\n"
-                    "3 - Prevenção e Dicas"
-                ),
-                "menu_state": "main_menu"
-            }
-        else:
-            return {
-                "answer": (
-                    "👋 Olá, somos o Drenna!\n\n"
-                    "Selecione a categoria que melhor define sua dúvida:\n\n"
-                    "1 - Alertas e Situações de Risco\n"
-                    "2 - Relatar um problema\n"
-                    "3 - Prevenção e Dicas"
-                ),
-                "menu_state": "main_menu"
-            }
+        # Qualquer entrada na estado inicial leva ao menu principal
+        return {
+            "answer": (
+                "👋 Olá, somos o Drenna!\n\n"
+                "Selecione a categoria que melhor define sua dúvida:\n\n"
+                "1 - Alertas e Situações de Risco\n"
+                "2 - Relatar um problema\n"
+                "3 - Prevenção e Dicas"
+            ),
+            "menu_state": "main_menu"
+        }
 
+    # Handle main menu state
     elif current_state == "main_menu":
         if pergunta == "1":
             return {
@@ -143,9 +136,10 @@ def generate(state: State):
                 "menu_state": "prevention_tips"
             }
 
+        # If input is not a valid main menu option, show the main menu again
         return {
             "answer": (
-                "Por favor, escolha uma das opções disponíveis:\n\n"
+                "Opção inválida. Por favor, escolha uma das opções disponíveis:\n\n"
                 "1 - Alertas e Situações de Risco\n"
                 "2 - Relatar um problema\n"
                 "3 - Prevenção e Dicas"
@@ -153,6 +147,7 @@ def generate(state: State):
             "menu_state": "main_menu"
         }
 
+    # Handle submenu 1 state (Alertas e Situações de Risco)
     elif current_state == "submenu_1":
         if pergunta == "1":
             return {"answer": "Beleza! Você pode me dizer o nome do seu bairro e cidade?", "menu_state": "awaiting_bairro"}
@@ -160,16 +155,44 @@ def generate(state: State):
         if pergunta == "2":
             return {"answer": "✅ Pronto! Seu aplicativo foi configurado para enviar alertas e notificações automaticamente.", "menu_state": "main_menu"}
 
+        # Add a numbered option to return to the main menu
+        if pergunta == "3":
+             return {
+                "answer": (
+                    "👋 Olá, somos o Drenna!\n\n"
+                    "Selecione a categoria que melhor define sua dúvida:\n\n"
+                    "1 - Alertas e Situações de Risco\n"
+                    "2 - Relatar um problema\n"
+                    "3 - Prevenção e Dicas"
+                ),
+                "menu_state": "main_menu"
+            }
+
+        # If input is not a valid submenu 1 option, show the submenu again
         return {
             "answer": (
-                "Por favor, escolha uma das opções disponíveis:\n\n"
+                "Opção inválida. Por favor, escolha uma das opções abaixo:\n\n"
                 "1 - Verificar enchentes na minha região\n"
-                "2 - Receber alertas e notificações"
+                "2 - Receber alertas e notificações\n"
+                "3 - Voltar ao Menu Principal"
             ),
             "menu_state": "submenu_1"
         }
 
+    # Handle awaiting bairro state
     elif current_state == "awaiting_bairro":
+         # Add a numbered option to return to the main menu
+        if pergunta == "4": # Using 4 as an example, adjust if needed based on context
+             return {
+                "answer": (
+                    "👋 Olá, somos o Drenna!\n\n"
+                    "Selecione a categoria que melhor define sua dúvida:\n\n"
+                    "1 - Alertas e Situações de Risco\n"
+                    "2 - Relatar um problema\n"
+                    "3 - Prevenção e Dicas"
+                ),
+                "menu_state": "main_menu"
+            }
         bairro_recebido = pergunta
         try:
             from app.services.enchente_service import verificar_enchente_por_bairro
@@ -179,10 +202,38 @@ def generate(state: State):
 
         return {"answer": resposta_bd, "menu_state": "main_menu"}
 
+    # Handle reporting problem state
     elif current_state == "reporting_problem":
+         # Add a numbered option to return to the main menu
+        if pergunta == "4": # Using 4 as an example, adjust if needed based on context
+             return {
+                "answer": (
+                    "👋 Olá, somos o Drenna!\n\n"
+                    "Selecione a categoria que melhor define sua dúvida:\n\n"
+                    "1 - Alertas e Situações de Risco\n"
+                    "2 - Relatar um problema\n"
+                    "3 - Prevenção e Dicas"
+                ),
+                "menu_state": "main_menu"
+            }
+         # Assuming any input here is the problem description
         return {"answer": "Obrigado! Sua solicitação foi registrada e será analisada por nossa equipe.", "menu_state": "main_menu"}
 
+    # Handle prevention tips state
     elif current_state == "prevention_tips":
+        # Add a numbered option to return to the main menu
+        if pergunta == "4": # Using 4 as an example, adjust if needed based on context
+             return {
+                "answer": (
+                    "👋 Olá, somos o Drenna!\n\n"
+                    "Selecione a categoria que melhor define sua dúvida:\n\n"
+                    "1 - Alertas e Situações de Risco\n"
+                    "2 - Relatar um problema\n"
+                    "3 - Prevenção e Dicas"
+                ),
+                "menu_state": "main_menu"
+            }
+        # Process question using RAG
         docs_content = "\n\n".join(doc.page_content for doc in state["context"])
         messages = prompt.invoke({
             "question": state["question"],
@@ -190,8 +241,16 @@ def generate(state: State):
         })
         response = llm.invoke(messages)
         resposta_original = response.content.strip()
-        return {"answer": resposta_original, "menu_state": "prevention_tips"}
 
+        # Add instruction to return to main menu
+        resposta_final = resposta_original + (
+            "\n\nDigite 'menu' ou 'voltar' a qualquer momento para retornar ao Menu Principal."
+        )
+
+        # Stay in prevention_tips state to allow follow-up questions
+        return {"answer": resposta_final, "menu_state": "prevention_tips"}
+
+    # Fallback for unexpected states
     return {"answer": "Desculpe, algo inesperado aconteceu. Por favor, digite 'menu' para recomeçar.", "menu_state": "main_menu"}
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
