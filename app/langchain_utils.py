@@ -15,7 +15,7 @@ from langgraph.graph import StateGraph, START
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import VideoUnavailable
 import random
-from app.services.enchente_service import verificar_enchente_por_bairro, verificar_enchente_por_bairro_e_cidade
+from app.services.enchente_service import verificar_enchente_por_bairro_e_cidade
 
 llm = ChatOpenAI(model="gpt-4o-mini")
 embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
