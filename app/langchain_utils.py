@@ -218,7 +218,7 @@ def generate(state: State):
              docs_content += (
                 "\n\nMonte uma resposta iniciando com a frase: "
                 "'A lista de itens essenciais para essa emergência é a seguinte:', "
-                "seguida por uma lista clara separada por hífens (-), sem explicações longas.""
+                "seguida por uma lista clara separada por hífens (-), sem explicações longas."
              )
 
         messages = prompt.invoke({
