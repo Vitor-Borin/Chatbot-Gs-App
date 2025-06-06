@@ -15,7 +15,7 @@ from langgraph.graph import StateGraph, START
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import VideoUnavailable
 import random
-from app.services.enchente_service import verificar_enchente_por_bairro
+from app.services.enchente_service import verificar_enchente_por_bairro, verificar_enchente_por_bairro_e_cidade
 
 llm = ChatOpenAI(model="gpt-4o-mini")
 embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
@@ -167,16 +167,23 @@ def generate(state: State):
                 "menu_state": "main_menu"
             }
 
-        bairro_recebido = pergunta
-        try:
-            resposta_bd = verificar_enchente_por_bairro(bairro_recebido)
-        except Exception as e:
-            print(f"Erro ao verificar enchente no BD para o bairro {bairro_recebido}: {e}") 
-            resposta_bd = f"Desculpe, ocorreu um erro ao verificar informações para o bairro {bairro_recebido}. Por favor, tente novamente mais tarde."
+        # Tenta extrair bairro e cidade da pergunta do usuário
+        partes = pergunta.split(',')
+        if len(partes) == 2:
+            bairro_recebido = partes[0].strip()
+            cidade_recebida = partes[1].strip()
+            try:
+                # Chama a nova função que busca alerta e nível
+                resposta_bd = verificar_enchente_por_bairro_e_cidade(bairro_recebido, cidade_recebida)
+            except Exception as e:
+                print(f"Erro ao chamar verificar_enchente_por_bairro_e_cidade: {e}")
+                resposta_bd = "Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde."
+        else:
+            resposta_bd = "Formato inválido. Por favor, digite o bairro e a cidade separados por vírgula (ex: Centro, São Paulo)."
 
         final_resposta_bd = resposta_bd + "\n\nDigite 'menu' ou 'voltar' para retornar ao Menu Principal."
 
-        return {"answer": final_resposta_bd, "menu_state": "main_menu"} 
+        return {"answer": final_resposta_bd, "menu_state": "main_menu"} # Retorna ao menu principal após a resposta
 
     elif current_state == "reporting_problem":
         if pergunta in ["menu", "voltar", "menu principal", "cancelar"]:
