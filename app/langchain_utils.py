@@ -206,18 +206,18 @@ def generate(state: State):
         if has_list_keywords and has_sim_keywords:
             docs_content += (
                 "\n\nResponda como uma simulação realista dividida em etapas claras:"
-                ""ANTES, DURANTE E DEPOIS do desastre. Na etapa ANTES, inclua uma lista clara de itens essenciais separada por hífens (-), sem explicações longas para a lista.""
+                " "ANTES, DURANTE E DEPOIS do desastre. Na etapa ANTES, inclua uma lista clara de itens essenciais separada por hífens (-), sem explicações longas para a lista." "
                 "Seja direto, didático e empático."
             )
         elif has_sim_keywords:
             docs_content += (
                 "\n\nResponda como uma simulação realista dividida em etapas claras:"
-                ""ANTES, DURANTE E DEPOIS do desastre. Seja direto, didático e empático.""
+                " "ANTES, DURANTE E DEPOIS do desastre. Seja direto, didático e empático." "
             )
         elif has_list_keywords:
              docs_content += (
                 "\n\nMonte uma resposta iniciando com a frase: "
-                ""A lista de itens essenciais para essa emergência é a seguinte:', "
+                "'A lista de itens essenciais para essa emergência é a seguinte:', "
                 "seguida por uma lista clara separada por hífens (-), sem explicações longas.""
              )
 
