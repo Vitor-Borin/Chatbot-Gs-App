@@ -200,6 +200,27 @@ def generate(state: State):
 
         docs_content = "\n\n".join(doc.page_content for doc in state.get("context", []))
 
+        has_list_keywords = any(p in pergunta for p in ["o que levar", "kit", "itens", "essenciais", "emergência"])
+        has_sim_keywords = any(p in pergunta for p in ["simule", "etapa", "passo a passo"])
+
+        if has_list_keywords and has_sim_keywords:
+            docs_content += (
+                "\n\nResponda como uma simulação realista dividida em etapas claras:"
+                ""ANTES, DURANTE E DEPOIS do desastre. Na etapa ANTES, inclua uma lista clara de itens essenciais separada por hífens (-), sem explicações longas para a lista.""
+                "Seja direto, didático e empático."
+            )
+        elif has_sim_keywords:
+            docs_content += (
+                "\n\nResponda como uma simulação realista dividida em etapas claras:"
+                ""ANTES, DURANTE E DEPOIS do desastre. Seja direto, didático e empático.""
+            )
+        elif has_list_keywords:
+             docs_content += (
+                "\n\nMonte uma resposta iniciando com a frase: "
+                ""A lista de itens essenciais para essa emergência é a seguinte:', "
+                "seguida por uma lista clara separada por hífens (-), sem explicações longas.""
+             )
+
         messages = prompt.invoke({
             "question": state["question"],
             "context": docs_content
