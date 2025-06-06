@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.services.enchente_service import verificar_enchente_por_bairro
+from app.services.enchente_service import verificar_enchente_por_bairro_e_cidade
 from app.langchain_utils import gerar_resposta
 
 router = APIRouter()
@@ -21,7 +21,7 @@ def responder(pergunta: Pergunta):
 @router.get("/enchente")
 def consultar_enchente(bairro: str):
     try:
-        alerta = verificar_enchente_por_bairro(bairro)
+        alerta = verificar_enchente_por_bairro_e_cidade(bairro)
         return {"bairro": bairro, "alerta": alerta}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
