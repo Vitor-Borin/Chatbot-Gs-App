@@ -96,7 +96,7 @@ def generate(state: State):
 
     submenu_1_answer = (
         "Entendido! Agora escolha uma das opções abaixo:\n\n"
-        "1 - Verificar enchentes na minha região\n"
+        "1 - Verificar alertas na minha região\n"
         "2 - Receber alertas e notificações\n"
         "3 - Voltar ao Menu Principal"
     )
